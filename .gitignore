@@ -1,0 +1,6 @@
+fhir.env
+auth_settings.env
+!fhir.env.example
+!auth_settings.env.example
+.env
+!.env.example

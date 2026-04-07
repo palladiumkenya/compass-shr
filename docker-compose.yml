@@ -1,0 +1,61 @@
+services:
+  nginx:
+    image: ${NGINX_IMAGE}
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - compass-auth
+      - fhir
+    restart: unless-stopped
+
+  compass-auth:
+    image: ${COMPASS_AUTH_IMAGE}
+    ports:
+      - "${PORT:-7777}:7777"
+    env_file:
+      - auth_settings.env
+    restart: unless-stopped
+
+  fhir:
+    image: ${COMPASS_FHIR_IMAGE}
+    ports:
+      - "8080:8080"
+    configs:
+      - source: hapi
+        target: /app/config/application.yaml
+    env_file:
+      - fhir.env
+    depends_on:
+      - db
+
+  seeder:
+    image: ${SEEDER_IMAGE}
+    restart: "no"
+    command: python /app/seed.py
+    volumes:
+      - ./fhir/seed.py:/app/seed.py:ro
+      - ./fhir/all_emr_sites.csv:/app/all_emr_sites.csv:ro
+    env_file:
+      - auth_settings.env
+    environment:
+      FHIR_URL: http://fhir:8080
+      AUTH_URL: http://compass-auth:7777
+    depends_on:
+      - fhir
+      - compass-auth
+
+  db:
+    image: ${POSTGRES_IMAGE}
+    restart: always
+    env_file:
+      - fhir.env
+    volumes:
+      - hapi_postgress_data:/var/lib/postgresql/data
+
+configs:
+  hapi:
+     file: ./fhir/hapi.full.application.yaml
+volumes:
+  hapi_postgress_data:
