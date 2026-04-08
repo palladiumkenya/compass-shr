@@ -2,7 +2,7 @@ services:
   nginx:
     image: ${NGINX_IMAGE}
     ports:
-      - "80:80"
+      - "${NGINX_PORT:-80}:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
@@ -12,16 +12,12 @@ services:
 
   compass-auth:
     image: ${COMPASS_AUTH_IMAGE}
-    ports:
-      - "${PORT:-7777}:7777"
     env_file:
       - auth_settings.env
     restart: unless-stopped
 
   fhir:
     image: ${COMPASS_FHIR_IMAGE}
-    ports:
-      - "8080:8080"
     configs:
       - source: hapi
         target: /app/config/application.yaml
