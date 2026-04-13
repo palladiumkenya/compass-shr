@@ -10,7 +10,7 @@ import urllib.request
 
 FHIR_URL = os.environ.get("FHIR_URL", "http://fhir:8080")
 AUTH_URL = os.environ.get("AUTH_URL", "http://compass-auth:7777")
-CSV_PATH = os.environ.get("CSV_PATH", "/app/all_emr_sites.csv")
+CSV_PATH = os.environ.get("CSV_PATH", "/app/study_sites.csv")
 
 
 def wait_for_fhir():
@@ -59,9 +59,8 @@ def fhir_organization_total(token):
 
 
 def build_organization(row):
+    facility_id = row["Facility_Id"].strip()
     mfl_code = row["MFL_Code"].strip()
-    lat_raw = row["Latitude"].strip()
-    lon_raw = row["Longitude"].strip()
 
     address = {
         "district": row["SubCounty"].strip(),
@@ -69,36 +68,28 @@ def build_organization(row):
         "country": "KE",
     }
 
-    if lat_raw.lower() != "none" and lon_raw.lower() != "none":
-        address["extension"] = [
-            {
-                "url": "http://hl7.org/fhir/StructureDefinition/geolocation",
-                "extension": [
-                    {"url": "latitude", "valueDecimal": float(lat_raw)},
-                    {"url": "longitude", "valueDecimal": float(lon_raw)},
-                ],
-            }
-        ]
-
     return {
         "resourceType": "Organization",
-        "id": mfl_code,
+        "id": facility_id,
         "identifier": [
+            {
+                "system": "https://kmhfl.health.go.ke/facility-id",
+                "value": facility_id,
+            },
             {
                 "system": "https://kmhfl.health.go.ke",
                 "value": mfl_code,
-            }
+            },
         ],
         "active": True,
-        "type": [{"text": row["Owner"].strip()}],
         "name": row["Facility_Name"].strip(),
         "address": [address],
     }
 
 
 def put_organization(token, resource):
-    mfl_code = resource["id"]
-    url = f"{FHIR_URL}/fhir/Organization/{mfl_code}"
+    facility_id = resource["id"]
+    url = f"{FHIR_URL}/fhir/Organization/{facility_id}"
     data = json.dumps(resource).encode()
     req = urllib.request.Request(url, data=data, method="PUT")
     req.add_header("Authorization", f"Bearer {token}")
@@ -137,10 +128,10 @@ def main():
                     print(f"  {seeded} facilities seeded...")
             except urllib.error.HTTPError as e:
                 errors += 1
-                print(f"  ERROR {e.code} for MFL {row['MFL_Code']}: {e.read().decode()[:200]}")
+                print(f"  ERROR {e.code} for {row['Facility_Id']}: {e.read().decode()[:200]}")
             except Exception as e:
                 errors += 1
-                print(f"  ERROR for MFL {row['MFL_Code']}: {e}")
+                print(f"  ERROR for {row['Facility_Id']}: {e}")
 
     print(f"Done. Seeded {seeded} facilities. Errors: {errors}.")
 

@@ -32,7 +32,7 @@ services:
     command: python /app/seed.py
     volumes:
       - ./fhir/seed.py:/app/seed.py:ro
-      - ./fhir/all_emr_sites.csv:/app/all_emr_sites.csv:ro
+      - ./fhir/study_sites.csv:/app/study_sites.csv:ro
     env_file:
       - auth_settings.env
     environment:
